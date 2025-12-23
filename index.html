@@ -21,7 +21,21 @@
       color:#fff;
       -webkit-text-size-adjust:100%;
     }
-    .wrap{ max-width:560px; margin:0 auto; padding:16px 16px 28px; }
+
+    /* NEW: центрируем карточку по экрану */
+    .page{
+      min-height: 100svh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 16px;
+    }
+
+    .wrap{
+      width:100%;
+      max-width:560px;
+    }
+
     .card{
       background:rgba(255,255,255,0.06);
       border:1px solid rgba(255,255,255,0.10);
@@ -123,97 +137,68 @@
     }
     textarea[readonly]{ opacity:0.9; }
 
-    .metaRow{
-      display:flex;
-      justify-content: space-between;
-      align-items: center;
-      gap:10px;
-      margin-top:8px;
-      opacity:0.75;
-      font-size:12px;
-    }
-    .linkbtn{
-      border:none;
-      background:transparent;
-      color:#fff;
-      opacity:0.85;
-      padding:0;
-      font-size:12px;
-      text-decoration: underline;
-      cursor:pointer;
-    }
     code{ opacity:0.9; }
   </style>
 </head>
 
 <body>
-<div class="wrap">
-  <div class="card">
+<div class="page">
+  <div class="wrap">
+    <div class="card">
 
-    <div class="word" id="questionWord">—</div>
-    <div class="hint" id="hintText">Нажми «Новые слова» или добавь их в резерв</div>
+      <div class="word" id="questionWord">—</div>
+      <div class="hint" id="hintText">Нажми «Новые слова» или добавь их в резерв</div>
 
-    <div class="grid" id="answers"></div>
+      <div class="grid" id="answers"></div>
 
-    <div class="msg" id="msgBox"></div>
+      <div class="msg" id="msgBox"></div>
 
-    <!-- Кнопки под ответами, над резервом -->
-    <div class="row">
-      <button class="smallbtn" id="modeBtn">EN↔RU</button>
-      <button class="smallbtn" id="newBtn">Новые слова</button>
-      <button class="smallbtn" id="skipBtn">Пропустить</button>
-      <button class="smallbtn" id="repeatBtn">Повторить</button>
+      <div class="row">
+        <button class="smallbtn" id="modeBtn">EN↔RU</button>
+        <button class="smallbtn" id="newBtn">Новые слова</button>
+        <button class="smallbtn" id="skipBtn">Пропустить</button>
+        <button class="smallbtn" id="repeatBtn">Повторить</button>
+      </div>
+
+      <details open>
+        <summary>Резерв <span id="vaultCountInline" style="opacity:0.7;">(0)</span></summary>
+        <div class="hint" style="margin-top:8px;">
+          Формат: <code>english - русский</code>, по одному на строку. Минимум 4 строки.
+          Дубли удаляются при сохранении. Любые символы (например <code>[ ]</code>) допустимы.
+        </div>
+
+        <div class="taWrap">
+          <textarea id="vaultTextarea"
+            spellcheck="false"
+            inputmode="text"
+            autocapitalize="none"
+            autocomplete="off"
+            autocorrect="off"></textarea>
+        </div>
+
+        <div class="row">
+          <button class="smallbtn" id="saveVaultBtn">Сохранить</button>
+        </div>
+      </details>
+
+      <details>
+        <summary>Выучено <span id="learnedCountInline" style="opacity:0.7;">(0)</span></summary>
+
+        <div class="taWrap">
+          <textarea id="learnedTextarea" readonly></textarea>
+        </div>
+
+        <div class="row">
+          <button class="smallbtn danger" id="clearLearnedBtn">Очистить</button>
+        </div>
+      </details>
+
     </div>
-
-    <details open>
-      <summary>Резерв</summary>
-      <div class="hint" style="margin-top:8px;">
-        Формат: <code>english - русский</code>, по одному на строку. Минимум 4 строки.
-        Дубли удаляются при сохранении. Любые символы (например <code>[ ]</code>) допустимы.
-      </div>
-
-      <div class="metaRow">
-        <div id="vaultCount">Резерв: 0</div>
-        <button class="linkbtn" id="openEditorBtn" type="button">Открыть редактор</button>
-      </div>
-
-      <div class="taWrap">
-        <textarea id="vaultTextarea"
-          spellcheck="false"
-          inputmode="text"
-          autocapitalize="none"
-          autocomplete="off"
-          autocorrect="off"></textarea>
-      </div>
-
-      <div class="row">
-        <button class="smallbtn" id="saveVaultBtn">Сохранить</button>
-      </div>
-    </details>
-
-    <details>
-      <summary>Выучено</summary>
-
-      <div class="metaRow">
-        <div id="learnedCount">Выучено: 0</div>
-        <span></span>
-      </div>
-
-      <div class="taWrap">
-        <textarea id="learnedTextarea" readonly></textarea>
-      </div>
-
-      <div class="row">
-        <button class="smallbtn danger" id="clearLearnedBtn">Очистить</button>
-      </div>
-    </details>
-
   </div>
 </div>
 
 <script>
 (() => {
-  /* ===== SW registration (обновления) ===== */
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
       try {
@@ -231,22 +216,18 @@
         });
 
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-          // новый SW активировался → перезагрузим
           location.reload();
         });
       } catch {}
     });
   }
 
-  /* ===== Storage keys (совместимость) =====
-     Если у тебя уже были vt_* ключи в старых версиях — мы их подхватим и мигрируем. */
   const LS_ACTIVE  = 'vt_active_v7';
   const LS_VAULT   = 'vt_vault_v7';
   const LS_LEARNED = 'vt_learned_v7';
   const LS_MODE    = 'vt_mode_v7';
   const LS_ROUND   = 'vt_round_v7';
-
-  const LEGACY_WORDS = 'vt_words_v1'; // из самого раннего кода (список слов)
+  const LEGACY_WORDS = 'vt_words_v1';
 
   const BATCH_SIZE = 10;
 
@@ -267,14 +248,12 @@
   let mode    = loadMode();
   let round   = loadRound();
 
-  // Миграция из самого старого формата vt_words_v1 → vault (если новый vault пуст)
   if (vault.length < 4) {
     const legacy = loadPairs(LEGACY_WORDS, []);
     if (legacy.length >= 4) vault = legacy;
   }
   if (vault.length < 4) vault = [...DEFAULT_VAULT];
 
-  // Раунд без повторов (только по active)
   let deck = [];
   let deckPos = 0;
   let current = null;
@@ -288,8 +267,8 @@
   const taVault = document.getElementById('vaultTextarea');
   const taLearned = document.getElementById('learnedTextarea');
 
-  const elVaultCount = document.getElementById('vaultCount');
-  const elLearnedCount = document.getElementById('learnedCount');
+  const elVaultCountInline = document.getElementById('vaultCountInline');
+  const elLearnedCountInline = document.getElementById('learnedCountInline');
 
   const btnMode = document.getElementById('modeBtn');
   const btnNew = document.getElementById('newBtn');
@@ -297,9 +276,7 @@
   const btnRepeat = document.getElementById('repeatBtn');
   const btnSaveVault = document.getElementById('saveVaultBtn');
   const btnClearLearned = document.getElementById('clearLearnedBtn');
-  const btnOpenEditor = document.getElementById('openEditorBtn');
 
-  // --- init ---
   syncTextareas();
   savePairs(LS_VAULT, vault);
   savePairs(LS_ACTIVE, active);
@@ -308,18 +285,13 @@
   startRound(true);
   renderQuestion();
 
-  // --- UX: не залипаем с ошибкой ---
   taVault.addEventListener('input', () => setMsg(''));
+
   btnMode.addEventListener('click', () => {
     mode = (mode === 'EN_RU') ? 'RU_EN' : 'EN_RU';
     saveMode(mode);
     setMsg('');
     renderQuestion(true);
-  });
-
-  btnOpenEditor.addEventListener('click', () => {
-    // откроем edit.html (в PWA это всё равно тот же домен)
-    location.href = './edit.html';
   });
 
   btnSaveVault.addEventListener('click', () => {
@@ -337,11 +309,9 @@
     setMsg('Сохранено ✅ Удалено дублей: ' + removed, 'ok');
   });
 
-  // ВАЖНО: "Новые слова" берём из резерва ВПЕРЕМЕШКУ
   btnNew.addEventListener('click', () => {
     if (vault.length < 4) return setMsg('В резерве меньше 4 — добавь ещё.', 'bad');
 
-    // старый active → в learned
     if (active.length) learned = dedupePairs([...learned, ...active]);
 
     const shuffled = shuffle([...vault]);
@@ -361,7 +331,6 @@
     setMsg('Новые слова ✅ (' + active.length + ')', 'ok');
   });
 
-  // "Повторить" — берём из выученного тоже вперемешку
   btnRepeat.addEventListener('click', () => {
     if (learned.length < 4) return setMsg('В выученном меньше 4 — пока нечего повторять.', 'bad');
 
@@ -402,7 +371,6 @@
     deckPos = 0;
     current = active[deck[deckPos]];
     lockAnswers = false;
-    if (!firstInit) {/* round не показываем */}
   }
 
   function renderQuestion(forceRerenderCurrent=false) {
@@ -490,11 +458,10 @@
   }
 
   function updateCounts() {
-    elVaultCount.textContent = 'Резерв: ' + (vault.length || 0);
-    elLearnedCount.textContent = 'Выучено: ' + (learned.length || 0);
+    elVaultCountInline.textContent = '(' + (vault.length || 0) + ')';
+    elLearnedCountInline.textContent = '(' + (learned.length || 0) + ')';
   }
 
-  /* ===== Robust parser: принимает любые символы, разделитель — первое тире ===== */
   function parseLinesToPairs(text) {
     const lines = String(text).split('\n').map(s => s.trim()).filter(Boolean);
     if (lines.length < 4) return { error: 'Нужно минимум 4 строки.', items: null };
@@ -509,7 +476,6 @@
   }
 
   function splitFirstDash(line) {
-    // ищем первое вхождение '-' или '—'
     const idxHyphen = line.indexOf('-');
     const idxEmDash = line.indexOf('—');
 
@@ -542,10 +508,7 @@
   }
 
   function norm(s) {
-    return s
-      .toLowerCase()
-      .replace(/\s+/g, ' ')
-      .trim();
+    return s.toLowerCase().replace(/\s+/g, ' ').trim();
   }
 
   function shuffle(arr) {
